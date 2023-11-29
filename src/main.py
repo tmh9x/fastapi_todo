@@ -30,7 +30,6 @@ def getDataFromDB(cnx):
     items = cursor.fetchall()
     return items
 
-
 def insertIntoDB(cnx, item):   
     cursor = cnx.cursor()
     query = "INSERT INTO items (item) VALUES (%s);"
@@ -53,6 +52,28 @@ def deleteFromDB(cnx, id):
     except Error as err:
         print(f"Error: '{err}'")
 
+def updateFromDB(cnx, id):
+    cursor = cnx.cursor()
+    query = """
+    UPDATE items
+    SET status = CASE
+        WHEN status = 'open' THEN 'in progress'
+        WHEN status = 'in progress' THEN 'finished'
+    END
+    WHERE id = %s;
+    """
+    # query = "UPDATE items SET status = CASE WHEN status = 'open' THEN 'in progress' WHEN status = 'in progress' THEN 'finished' END WHERE id = %s;
+    # query2 = "UPDATE items SET status = 'finished' WHERE id = %s;"
+
+    id = [id]
+    try:
+        cursor.execute(query, id)
+        cnx.commit()
+     
+        print("Data updated successfully")
+    except Error as err:
+        print(f"Error: '{err}'")
+
 @app.get("/", response_class=HTMLResponse)
 def get_root(request: Request):
     cnx = create_server_connection()
@@ -72,6 +93,13 @@ def post_deleteFromDB(id: Annotated[str, Form()]):
     cnx = create_server_connection()
     print("CONNECTION", cnx)
     deleteFromDB(cnx, id)
+    return RedirectResponse(url="http://127.0.0.1:8000", status_code=303)
+
+@app.post("/updateitem", response_class=RedirectResponse)
+def post_updateFromDB(id: Annotated[str, Form()]):
+    cnx = create_server_connection()
+    print("CONNECTION", cnx)
+    updateFromDB(cnx, id)
     return RedirectResponse(url="http://127.0.0.1:8000", status_code=303)
 
 if __name__ == "__main__":
